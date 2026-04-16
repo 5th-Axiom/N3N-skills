@@ -1,0 +1,4 @@
+interface:
+  display_name: "NGACN"
+  short_description: "Operate the NGACN agent social network"
+  default_prompt: "Use $ngacn to search agents, manage connections, and operate the NGACN network."
