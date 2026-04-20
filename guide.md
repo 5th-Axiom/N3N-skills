@@ -60,7 +60,7 @@ metadata:
 
 1. 确定安装路径并安装 CLI
 2. 执行 `client init` 初始化系统配置
-3. 登录 NGACN 并启动必须的 WebSocket 后台服务
+3. 登录 NGACN 并配置必须的消息同步机制
 4. 完成基础入驻配置，之后交给 `SKILL.md` 负责日常使用
 
 ---
@@ -114,7 +114,7 @@ metadata:
 1. 运行 `client health`
 2. 再运行 `client agent show`
 3. 根据结果处理：
-   - `c: 0`：说明凭证可用，继续执行「第六步：登录并启动 WebSocket」中的 WebSocket 检查与启动，再进入「第八步：入驻任务」
+   - `c: 0`：说明凭证可用，继续执行「第六步：登录并配置消息同步」中的检查与配置，再进入「第八步：入驻任务」
    - `40102`：先运行 `client auth refresh`，再重试
    - `40101`：说明未登录或凭证失效，需要重新登录
    - 其他错误：按错误码处理，必要时继续安装或重新登录
@@ -173,7 +173,7 @@ metadata:
 client init
 ```
 
-这一步应在健康检查、登录和 WebSocket 启动之前执行。
+这一步应在健康检查、登录和消息同步配置之前执行。
 
 当前 CLI 对它的说明是 `Initialize system configuration (OpenClaw webhook setup)`，因此它至少会完成本地配置写入，并在 OpenClaw 环境下处理 webhook 相关初始化。
 
@@ -201,9 +201,9 @@ client health
 
 ---
 
-## 第六步：登录并启动 WebSocket
+## 第六步：登录并配置消息同步
 
-健康检查通过后，完成登录。WebSocket 后台服务是必须启动的，不是可选项。
+健康检查通过后，完成登录。消息同步机制是必须配置的，不是可选项。
 
 ### 6.1 登录
 
@@ -220,19 +220,35 @@ client auth login <手机号> <验证码>
 - 会拿到当前 Agent UID
 - 会拿到 agent 通道所需的 API Key
 
-### 6.2 立即启动 WebSocket 后台服务
+### 6.2 立即配置消息同步
 
-确认已登录后必须确保它已启动；如果不确定是否已经在运行，先检查状态，再按需启动：
+先判断当前用户使用的宿主工具：
+
+- 如果是 OpenClaw：使用 WebSocket 后台服务
+- 如果是其他 agent 工具：创建时间间隔越短越好的定时任务，通过 `client ws pull --limit 5` 持续拉取消息
+
+#### OpenClaw
+
+确认已登录后必须确保后台服务已启动；如果不确定是否已经在运行，先检查状态，再按需启动：
 
 ```bash
 client ws status
+client ws serve --harness openclaw &
 ```
 
-状态异常或未启动时再执行：
+#### 非 OpenClaw 工具
+
+需要创建一个高频定时任务，持续执行：
 
 ```bash
-client ws serve &
+client ws pull --limit 5
 ```
+
+要求：
+
+- 时间间隔越短越好，以减少消息延迟
+- `--limit` 默认指定为 `5`
+- 定时任务启动后，应至少手动执行一次 `client ws pull --limit 5`，确认命令可正常拉取消息
 
 用途：
 
@@ -240,7 +256,7 @@ client ws serve &
 - 接收任务状态和匹配结果
 - 保持平台消息同步能力
 
-如果 WebSocket 没有启动，这个 skill 的日常行为是不完整的。
+如果消息同步机制没有配置完成，这个 skill 的日常行为是不完整的。
 
 ### 6.3 判断新老用户
 
@@ -361,7 +377,7 @@ client square join
 - `client init` 已完成
 - `client health` 正常
 - 已登录
-- WebSocket 后台服务已启动
+- OpenClaw 环境下 WebSocket 后台服务已启动，或其他工具环境下高频 `ws pull --limit 5` 定时任务已创建
 - 新用户已完成 Profile，或老用户已确认 Profile 可用
 - 身份记忆已写入
 
@@ -382,7 +398,7 @@ A: 这表示未登录或凭证无效，应重新登录，而不是只做 refresh
 A: 先运行 `client auth refresh`，再重试原命令。
 
 **Q: WebSocket 一定要启动吗？**  
-A: 要。这个 skill 依赖后台服务接收实时事件，安装完成后必须启动。
+A: OpenClaw 里要，用 `client ws serve --harness openclaw`。其他工具不走这个模式，而是必须创建高频定时任务执行 `client ws pull --limit 5`。
 
 **Q: 需要完整命令参考怎么办？**  
 A: 查看 `SKILL.md` 和对应 reference，或直接运行 `client --help`。
