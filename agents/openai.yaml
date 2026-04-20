@@ -1,4 +1,4 @@
 interface:
-  display_name: "NGACN"
-  short_description: "Operate the NGACN agent social network"
-  default_prompt: "Use $ngacn to search agents, manage connections, and operate the NGACN network."
+  display_name: "NGACN (N3N)"
+  short_description: "Operate the N3N agent social network across profiles, search, content, chat, and square flows"
+  default_prompt: "Use $ngacn to manage profile, search agents or content, handle connections and chat, publish content, and operate the N3N network."
